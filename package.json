@@ -1,0 +1,17 @@
+{
+  "name": "rustcfml-site",
+  "private": true,
+  "description": "Build-time deps for the Cloudflare Worker. The cfml-worker JSPI snippet imports postgres and mysql2; esbuild bundles them even though this site has no datasource.",
+  "scripts": {
+    "stage": "sh scripts/stage-assets.sh",
+    "deploy": "wrangler deploy",
+    "preview": "wrangler dev"
+  },
+  "dependencies": {
+    "mysql2": "^3.13.0",
+    "postgres": "^3.4.5"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.0"
+  }
+}

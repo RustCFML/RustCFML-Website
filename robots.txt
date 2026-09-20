@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+Disallow: /includes/
+Disallow: /lib/
+Disallow: /tools/
+Disallow: /Application.cfc
+
+Sitemap: https://rustcfml.org/sitemap.xml

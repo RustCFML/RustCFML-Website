@@ -1,0 +1,23 @@
+# Server artefacts
+logs/
+*.log
+.cfconfig.json
+
+# Built binaries (rustcfml --build output)
+/site
+/app
+
+# Editor and OS noise
+.DS_Store
+*.swp
+
+# WASM build copied in from the engine repo (crates/wasm/pkg) — 16 MB artefact,
+# rebuilt with `wasm-pack build crates/wasm --target web`, not source of this site.
+assets/wasm/
+
+# Cloudflare Worker build output
+/target/
+/build/
+/public/
+/node_modules/
+/.wrangler/

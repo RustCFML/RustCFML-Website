@@ -1,0 +1,27 @@
+[package]
+name = "rustcfml-site-worker"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+description = "Cloudflare Workers host for the rustcfml.org website."
+build = "build.rs"
+
+# Standalone, not a workspace member: this crate is wasm32-only.
+[workspace]
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+cfml-worker = { git = "https://github.com/RustCFML/RustCFML.git", tag = "v0.685.5" }
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+worker = "0.8"
+worker-macros = "0.8"
+wasm-bindgen = "0.2"
+wasm-bindgen-futures = "0.4"
+
+[profile.release]
+opt-level = "s"
+lto = true
+strip = true

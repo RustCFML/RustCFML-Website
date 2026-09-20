@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Clean URLs for the site, in the order they must be applied.
+
+  The patterns are anchored and deliberately exclude anything containing a dot,
+  which is what keeps /assets/site.css being served as a file rather than being
+  treated as a template name. Rule 3 then makes sure the application's own
+  plumbing is never readable through the document root.
+-->
+<urlrewrite>
+    <rule>
+        <note>Do not serve the application's own plumbing.</note>
+        <from>^/(Application\.cfc|urlrewrite\.xml|logs/.*|includes/.*|lib/.*|tools/.*)$</from>
+        <to last="true">/404.cfm</to>
+    </rule>
+
+    <rule>
+        <note>Clean URLs: /features and /features/ both resolve to features.cfm.</note>
+        <from>^/([a-z0-9][a-z0-9-]*)/?$</from>
+        <to last="true">/$1.cfm</to>
+    </rule>
+
+    <rule>
+        <note>
+          A page with a path, in case a section grows sub-pages:
+          /community/contributing -> community.cfm, with path_info set.
+        </note>
+        <from>^/([a-z][a-z0-9-]*)/([^/.]+)/?$</from>
+        <to last="true">/$1.cfm/$2</to>
+    </rule>
+</urlrewrite>
