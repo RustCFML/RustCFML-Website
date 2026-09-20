@@ -71,8 +71,8 @@ and the `includes/`, `lib/`, `logs/` and `tools/` directories are refused, and a
 unresolvable renders `404.cfm` (which sets its own 404 status). Keep the two in step —
 the native server reads the XML, the Worker reads the Rust.
 
-**Before deploying,** put the engine's browser build in `assets/wasm/`. It is 16 MB, it
-is gitignored, and `/try` is a dead page without it:
+**For a local deploy,** put the engine's browser build in `assets/wasm/` first. It is
+16 MB, it is gitignored, and `/try` is a dead page without it:
 
 ```bash
 # in the engine repo
@@ -81,7 +81,33 @@ cp -R crates/wasm/pkg/* /path/to/rustcfml-site/assets/wasm/
 ```
 
 A single asset may be up to 25 MiB, so it is served as a static file like anything else.
-Worth automating in CI against the engine's latest release rather than copying by hand.
+CI builds this for you, so copying by hand is only for deploying from a laptop.
+
+### Following the engine
+
+One number drives the whole build: the `cfml-worker` tag in `Cargo.toml`. The Worker
+compiles against it, `/try`'s browser engine is built from it, and `Application.cfc`
+quotes it in the footer and every download link. They are kept equal deliberately —
+they drifted 30 releases apart once, and the site told visitors it was a v0.653.14
+application while the Worker serving that page ran v0.685.5.
+
+| Workflow | When | What it does |
+|---|---|---|
+| `.github/workflows/update-rustcfml.yml` | hourly, or by hand | Bumps `Cargo.toml` and `Application.cfc` to the engine's current **stable** release, proves wasm32 still compiles, commits to `main`, then calls the deploy |
+| `.github/workflows/deploy.yml` | push to `main`, by hand, or called | Builds `/try`'s engine from the pinned tag, builds the Worker, deploys |
+
+"Stable" means the release a human promoted, not the newest tag: RustCFML publishes
+every version tag as a prerelease, so following tags would bump this site a dozen times
+in two days. Neither workflow needs any access to the engine repository.
+
+Two repository secrets are required:
+
+| Secret | For |
+|---|---|
+| `CLOUDFLARE_API_TOKEN` | Deploying. Needs *Edit Cloudflare Workers* on the account |
+| `CLOUDFLARE_ACCOUNT_ID` | The account to deploy into |
+
+`GH_PAT` is optional, and only matters if the org stops `GITHUB_TOKEN` pushing to `main`.
 
 ## Layout
 

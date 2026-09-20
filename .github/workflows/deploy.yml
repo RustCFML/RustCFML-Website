@@ -1,0 +1,95 @@
+name: Deploy
+
+# Builds and deploys the site to Cloudflare Workers.
+#
+# The engine tag pinned in Cargo.toml is the single source of truth for the
+# whole build: the Worker compiles against it, /try's browser engine is built
+# from it, and Application.cfc quotes it. That is deliberate — those three
+# drifted apart once already, and the site ended up telling visitors it was a
+# v0.653.14 application while the Worker serving the page ran v0.685.5.
+#
+# assets/wasm/ is not in the repository. It is a 16 MB artefact, so CI builds
+# it here from the pinned tag instead of anyone committing it.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+  workflow_call: {}
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout site
+        uses: actions/checkout@v4
+
+      - name: Resolve the pinned engine tag
+        id: engine
+        run: |
+          set -euo pipefail
+          tag="$(grep -oP 'cfml-worker\s*=.*tag\s*=\s*"\K[^"]+' Cargo.toml)"
+          [ -n "$tag" ] || { echo "::error::no cfml-worker tag in Cargo.toml"; exit 1; }
+          echo "Building against engine $tag"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout the engine at that tag
+        uses: actions/checkout@v4
+        with:
+          repository: RustCFML/RustCFML
+          ref: ${{ steps.engine.outputs.tag }}
+          path: .engine
+
+      - name: Set up Rust (wasm32)
+        run: |
+          set -euo pipefail
+          rustup toolchain install stable --profile minimal
+          rustup target add wasm32-unknown-unknown
+
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            ~/.cargo/bin
+            target
+            .engine/target
+          key: cargo-${{ runner.os }}-${{ steps.engine.outputs.tag }}-${{ hashFiles('Cargo.lock') }}
+          restore-keys: |
+            cargo-${{ runner.os }}-${{ steps.engine.outputs.tag }}-
+            cargo-${{ runner.os }}-
+
+      - name: Build the browser engine for /try
+        run: |
+          set -euo pipefail
+          curl -sSf https://rustwasm.github.io/wasm-pack/installer/init.sh | sh
+          wasm-pack build .engine/crates/wasm --release --target web --out-dir pkg
+          mkdir -p assets/wasm
+          cp .engine/crates/wasm/pkg/rustcfml_wasm.js assets/wasm/
+          cp .engine/crates/wasm/pkg/rustcfml_wasm_bg.wasm assets/wasm/
+          # try.js loads these two paths by name; fail here rather than shipping
+          # a /try page that 404s its own engine.
+          ls -l assets/wasm/rustcfml_wasm.js assets/wasm/rustcfml_wasm_bg.wasm
+
+      - name: Install node deps
+        run: npm ci
+
+      - name: Deploy
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          # wrangler.toml's [build] command stages public/ and runs worker-build.
+          command: deploy
+
+      - name: Summary
+        run: |
+          {
+            echo "### Deployed"
+            echo
+            echo "Engine: \`${{ steps.engine.outputs.tag }}\` — Worker, /try and the version on the page all built from it."
+          } >> "$GITHUB_STEP_SUMMARY"

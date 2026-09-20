@@ -1,0 +1,147 @@
+name: Update RustCFML
+
+# Follows the engine's current STABLE release and rebuilds the site on it.
+#
+# Adapted from the worker host's workflow of the same name, which learned two
+# things the hard way:
+#
+#   * Do not follow upstream TAGS. Every RustCFML version tag is published as a
+#     prerelease and a human promotes one to stable, so following tags meant a
+#     bump per patch release — a dozen in two days. `gh release view` resolves
+#     the promoted one.
+#   * Do not open a pull request. One superseded PR per release, none merged, is
+#     how a dependency ends up six versions behind. The build gate is what makes
+#     a PR unnecessary: wasm32 must compile against the new engine before
+#     anything is committed, and a failure leaves main untouched.
+#
+# What it bumps, and why both: Cargo.toml pins the engine the Worker runs, and
+# Application.cfc's `this.version` drives the footer and every download link.
+# Before this existed those two drifted 30 releases apart, because the
+# tools/set-version.py the README points at is not in the repository.
+#
+# Mechanism: scheduled poll, so nothing is needed in the RustCFML repo.
+
+on:
+  schedule:
+    - cron: "0 * * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+env:
+  UPSTREAM_REPO: RustCFML/RustCFML
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    outputs:
+      changed: ${{ steps.versions.outputs.changed }}
+      latest: ${{ steps.versions.outputs.latest }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}
+
+      - name: Determine current and latest versions
+        id: versions
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          current="$(grep -oP 'cfml-worker\s*=.*tag\s*=\s*"\K[^"]+' Cargo.toml)"
+          site="$(grep -oP 'this\.version\s*=\s*"\K[^"]+' Application.cfc)"
+          echo "Worker pins: $current"
+          echo "Site quotes: $site"
+
+          # GitHub's "latest release" excludes prereleases, which is exactly the
+          # promoted-to-stable one.
+          latest="$(gh release view --repo "${UPSTREAM_REPO}" --json tagName --jq .tagName)"
+          echo "Latest stable: $latest"
+          [ -n "$latest" ] || { echo "::error::no stable release found"; exit 1; }
+
+          {
+            echo "current=$current"
+            echo "latest=$latest"
+          } >> "$GITHUB_OUTPUT"
+
+          # Rebuild when either file is behind: the site version can lag even
+          # when the worker pin does not.
+          if [ "$current" = "$latest" ] && [ "$site" = "$latest" ]; then
+            echo "Already on $latest. Nothing to do."
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          elif [ "$(printf '%s\n%s\n' "$current" "$latest" | sort -V | tail -n1)" != "$latest" ]; then
+            echo "Pinned $current is newer than the latest stable $latest. Leaving it alone."
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Set up Rust (wasm32)
+        if: steps.versions.outputs.changed == 'true'
+        run: |
+          set -euo pipefail
+          rustup toolchain install stable --profile minimal
+          rustup target add wasm32-unknown-unknown
+
+      - name: Cache cargo
+        if: steps.versions.outputs.changed == 'true'
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: cargo-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
+          restore-keys: |
+            cargo-${{ runner.os }}-
+
+      - name: Bump both files and verify the build
+        if: steps.versions.outputs.changed == 'true'
+        env:
+          CURRENT: ${{ steps.versions.outputs.current }}
+          LATEST: ${{ steps.versions.outputs.latest }}
+        run: |
+          set -euo pipefail
+
+          sed -i "s|tag = \"${CURRENT}\"|tag = \"${LATEST}\"|" Cargo.toml
+          sed -i "s|this\.version = \"[^\"]*\"|this.version = \"${LATEST}\"|" Application.cfc
+
+          # Prove both edits landed: a sed pattern that matches nothing still
+          # exits 0, and the run would commit a bump that never happened.
+          grep -q "tag = \"${LATEST}\"" Cargo.toml \
+            || { echo "::error::Cargo.toml does not pin ${LATEST}"; exit 1; }
+          grep -q "this.version = \"${LATEST}\"" Application.cfc \
+            || { echo "::error::Application.cfc does not quote ${LATEST}"; exit 1; }
+
+          cargo update -p cfml-worker --precise "${LATEST}"
+
+          # The gate that makes committing without review safe.
+          cargo build --release --target wasm32-unknown-unknown
+
+      - name: Commit to main
+        if: steps.versions.outputs.changed == 'true'
+        env:
+          CURRENT: ${{ steps.versions.outputs.current }}
+          LATEST: ${{ steps.versions.outputs.latest }}
+        run: |
+          set -euo pipefail
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Cargo.toml Cargo.lock Application.cfc
+          git commit -m "Rebuild on RustCFML ${LATEST} (was ${CURRENT})
+
+          ${LATEST} was promoted to stable upstream. The Worker's engine pin and
+          the version the site quotes are bumped together, and wasm32 compiled
+          against the new engine in CI before this was committed."
+          git push origin "HEAD:${{ github.ref_name }}"
+
+  # Called directly rather than left to the push above: a push authenticated
+  # with GITHUB_TOKEN does not trigger `on: push` workflows.
+  deploy:
+    needs: update
+    if: needs.update.outputs.changed == 'true'
+    uses: ./.github/workflows/deploy.yml
+    secrets: inherit

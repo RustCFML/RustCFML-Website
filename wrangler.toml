@@ -6,10 +6,13 @@ main = "build/worker/shim.mjs"
 compatibility_date = "2026-05-25"
 compatibility_flags = ["nodejs_compat"]
 
-# The apex domain. Cloudflare creates the DNS record and certificate for it,
-# and routes every path to this Worker (static assets below are answered
-# before the Worker runs). Add `zone_name = "rustcfml.org"` if a deploy ever
-# fails to infer the zone.
+# A workers.dev URL for testing, alongside whatever custom domain is live.
+workers_dev = true
+
+# The apex. Cloudflare creates the DNS record and certificate for it on deploy,
+# and points every path at this Worker; static assets above are still answered
+# before the Worker runs. Add `zone_name = "rustcfml.org"` if a deploy cannot
+# infer the zone.
 [[routes]]
 pattern = "rustcfml.org"
 custom_domain = true

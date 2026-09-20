@@ -9,7 +9,7 @@ component {
     // changelog URL follows from it. Nothing here is a secret, so there is no
     // environment substitution: this is a brochure site for an open repo.
     // ---------------------------------------------------------------------
-    this.version = "v0.653.14";
+    this.version = "v0.685.5";
     this.repo    = "https://github.com/RustCFML/RustCFML";
 
     // Top navigation. `section` is what each page sets request.section to, so
