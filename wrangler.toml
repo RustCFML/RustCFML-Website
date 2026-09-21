@@ -17,12 +17,14 @@ workers_dev = true
 pattern = "rustcfml.org"
 custom_domain = true
 
-# www is attached to the same Worker only so it can answer at all: every
-# request to it is redirected to the apex, which is what sitemap.xml and
-# robots.txt name as canonical.
+# www answers only to redirect to the apex, which is what sitemap.xml and
+# robots.txt name as canonical. A plain route rather than a custom domain:
+# the zone already has a proxied CNAME for www, and a route binds to an
+# existing proxied record, where a custom domain would want to create its
+# own and collide with it.
 [[routes]]
-pattern = "www.rustcfml.org"
-custom_domain = true
+pattern = "www.rustcfml.org/*"
+zone_name = "rustcfml.org"
 
 # Static assets: anything present here is served directly, without invoking
 # (or billing for) the Worker. Anything else falls through to the Worker,
