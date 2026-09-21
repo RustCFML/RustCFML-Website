@@ -12,6 +12,7 @@
     "postgres": "^3.4.5"
   },
   "devDependencies": {
-    "esbuild": "^0.28.0"
+    "esbuild": "^0.28.0",
+    "wrangler": "^4.94.0"
   }
 }
