@@ -27,6 +27,22 @@
     syncThemeButton();
   }
 
+  /* Follow the OS while the visitor has not chosen for themselves: someone on
+     an automatic day/night schedule sees the page turn with everything else.
+     A stored choice is a decision, so it outranks the system. */
+  if ( window.matchMedia ) {
+    var scheme = window.matchMedia( "(prefers-color-scheme: light)" );
+    var followSystem = function ( e ) {
+      var chosen = null;
+      try { chosen = localStorage.getItem( "rc-theme" ); } catch ( err ) {}
+      if ( chosen ) return;
+      root.setAttribute( "data-theme", e.matches ? "light" : "dark" );
+      syncThemeButton();
+    };
+    if ( scheme.addEventListener )   scheme.addEventListener( "change", followSystem );
+    else if ( scheme.addListener )   scheme.addListener( followSystem );
+  }
+
   /* ---- Mobile navigation ------------------------------------------------ */
   var menuBtn = document.getElementById( "menuBtn" );
   var nav     = document.getElementById( "siteNav" );

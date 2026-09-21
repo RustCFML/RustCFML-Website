@@ -18,17 +18,21 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/assets/site.css">
 <script>
-// Paint the stored theme before the first frame, or every page load flashes
-// the wrong colours. Inline here rather than in site.js, which is deferred and
+// Paint the theme before the first frame, or every page load flashes the
+// wrong colours. Inline here rather than in site.js, which is deferred and
 // would run too late.
+//
+// A stored choice wins; failing that the OS decides. The test is for light
+// rather than dark so that "no preference", an ancient browser and a blocked
+// localStorage all land on dark, which is this site's default.
 (function () {
   document.documentElement.className += " js";
-  try {
-    document.documentElement.setAttribute(
-      "data-theme", localStorage.getItem( "rc-theme" ) || "dark" );
-  } catch ( e ) {
-    document.documentElement.setAttribute( "data-theme", "dark" );
-  }
+  var stored = null;
+  try { stored = localStorage.getItem( "rc-theme" ); } catch ( e ) {}
+  var light = window.matchMedia
+    && window.matchMedia( "(prefers-color-scheme: light)" ).matches;
+  document.documentElement.setAttribute(
+    "data-theme", stored || ( light ? "light" : "dark" ) );
 })();
 </script>
 </head>
