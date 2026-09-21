@@ -110,6 +110,15 @@ pub async fn fetch(req: Request, env: Env, ctx: Context) -> Result<Response> {
     let config = build_config();
 
     let mut url = req.url()?;
+
+    // One canonical hostname. sitemap.xml and robots.txt both name the apex,
+    // so www is answered only to send visitors there, path and query intact.
+    if let Some(apex) = url.host_str().and_then(|h| h.strip_prefix("www.")) {
+        let apex = apex.to_string();
+        url.set_host(Some(&apex))?;
+        return Response::redirect_with_status(url, 301);
+    }
+
     let target = resolve(url.path());
     if target == url.path() {
         return cfml_worker::handle_fetch(req, env, ctx, &config).await;
