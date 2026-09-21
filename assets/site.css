@@ -835,7 +835,9 @@ td.num .bar { margin-top: 6px; }
 }
 
 @media (max-width: 760px) {
-  .js-gh span:not(.pill) { display: none; }
+  /* The header runs out of room before the nav does: Download moves into the
+     menu, where .nav-mobile-only puts it. */
+  .header-dl { display: none; }
   .kv { grid-template-columns: minmax(0, 1fr); }
   .doc-list { grid-template-columns: minmax(0, 1fr); }
   .pipeline { font-size: .72rem; }

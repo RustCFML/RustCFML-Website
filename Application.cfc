@@ -19,10 +19,12 @@ component {
         , { label = "Features",    href = "/features",    section = "features" }
         , { label = "Performance", href = "/performance", section = "performance" }
         , { label = "Docs",        href = "/docs",        section = "docs" }
-        , { label = "Download",    href = "/download",    section = "download" }
         , { label = "Community",   href = "/community",   section = "community" }
+        , { label = "Extensions",  href = "/extensions",  section = "extensions" }
         , { label = "About",       href = "/about",       section = "about" }
     ];
+    // Download is deliberately not in the list above: the header renders it as
+    // a button rather than a link, so it reads as the one thing to do.
 
     // Headline numbers on the home page. Kept honest: these are the figures
     // published in the project README, with their provenance stated on the
@@ -80,6 +82,18 @@ component {
         , { face = "Deploy"
           , edgeA = "CLI or native binary", edgeB = "Server or edge"
           , detail = "Behind a reverse proxy, as a single-file application, as a CLI , or on a Cloudflare Worker through WebAssembly." }
+    ];
+
+    // Published .rcx extensions: Rust compiled against the engine's ABI, which
+    // a stock binary loads at start-up. `repo` is a repository name under the
+    // RustCFML organisation, not a full URL — onApplicationStart builds those.
+    this.extensions = [
+          { name = "Browser", icon = "globe", repo = "RustCFML-Extension-Browser", version = "v0.1.0"
+          , blurb = "A real headless browser inside the engine. JavaScript executes, CSS lays out, and you get screenshots and PDFs back, with no Chrome, no Selenium and no JVM. Built on Obscura, an independent browser engine written in Rust."
+          , note = "About 40 MB, because it carries V8 and a complete layout and paint engine. Needs the engine at v0.685.5 or newer." }
+        , { name = "Typst", icon = "book", repo = "RustCFML-Extension-Typst", version = "v0.1.0"
+          , blurb = "Document generation backed by Typst, the modern answer to LaTeX. A fluent Document() builder covers page setup, rich text, tables from a query, footnotes and a table of contents, or a designer owns a .typ template and CFML supplies only the data."
+          , note = "A library rather than a subprocess: roughly 6 ms to compile a two-page invoice and 2 ms to export the PDF. Apache-2.0 throughout." }
     ];
 
     // Documentation index, mirroring the docs/ directory in the repository.
@@ -212,6 +226,14 @@ component {
         application.docGroups  = this.docGroups;
         application.platforms  = this.platforms;
         application.faq        = this.faq;
+
+        // Each extension carries a repository name; the URLs follow from it.
+        application.org = "https://github.com/RustCFML";
+        application.extensions = this.extensions.map( function ( ext ) {
+            ext.url     = application.org & "/" & ext.repo;
+            ext.release = ext.url & "/releases/latest";
+            return ext;
+        } );
 
         // Derived once, at start-up, rather than concatenated on every page.
         var repo              = this.repo;
