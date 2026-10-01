@@ -151,14 +151,14 @@ open http://localhost:8500/index.cfm</code></pre>
       <div class="card reveal">
         <span class="tag">Deploy it</span>
         <p>Production mode plus a Unix socket behind nginx is the whole deployment story for
-           most applications. Docker is a small Dockerfile away.</p>
+           most applications. For containers, the <a href="#( application.docker )#" rel="noopener">official image</a>
+           makes a good base.</p>
         <div class="term">
-          <div class="term-bar"><span class="term-name">entrypoint</span></div>
-<pre class="term-body"><code>FROM rustcfml:latest
-COPY ./webroot /srv/webroot
-EXPOSE 8080
-ENTRYPOINT ["rustcfml", "--serve", "/srv/webroot",
-            "--production", "--socket=/run/rustcfml.sock"]</code></pre>
+          <div class="term-bar"><span class="term-name">Dockerfile</span></div>
+<pre class="term-body"><code>FROM #( application.image )#:#( application.version )#
+COPY --chown=nonroot:nonroot webroot/ /srv/app/
+## only if the app ships .rcx extensions:
+RUN rustcfml-warm-extensions</code></pre>
         </div>
       </div>
       </cfoutput>

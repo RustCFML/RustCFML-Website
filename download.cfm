@@ -1,7 +1,7 @@
 <cfscript>
 request.section = "download";
 request.title   = "Download: get the binary";
-request.desc    = "Download RustCFML as a single binary for macOS, Linux or Windows, run the interactive WASM demo in your browser, or build the latest main from source.";
+request.desc    = "Download RustCFML as a single binary for macOS, Linux or Windows, run the official Docker image, try the WASM demo in your browser, or build the latest main from source.";
 
 icons = new lib.Icons();
 </cfscript>
@@ -81,7 +81,7 @@ rustcfml --version</code></pre>
 <!-- ==================================================================== -->
 <section class="tint">
   <div class="wrap">
-    <div class="grid grid-3">
+    <div class="grid grid-2">
       <cfoutput>
       <div class="card reveal">
         <div class="card-ico">#( icons.get( "globe" ) )#</div>
@@ -89,6 +89,19 @@ rustcfml --version</code></pre>
         <p>The engine compiled to WebAssembly: the real interpreter, in your tab. It is the same target that runs on a Cloudflare Worker, so it doubles as a preview of the edge build.</p>
         <p><a class="card-more" href="#( application.demo )#" rel="noopener">Open the WASM demo</a></p>
         <p><a class="card-more" href="#( application.trycf )#" rel="noopener">Or run a snippet on TryCF</a></p>
+      </div>
+
+      <div class="card reveal">
+        <div class="card-ico">#( icons.get( "package" ) )#</div>
+        <h3>Run the container</h3>
+        <p>A multi-arch image (amd64 and arm64) on Chainguard Wolfi: about 36 MB, non-root, extension-aware, and it stops cleanly on <code class="inline">docker stop</code>. Tags follow engine releases.</p>
+        <div class="term" style="margin-top:14px">
+          <div class="term-bar"><span class="term-name">docker</span></div>
+<pre class="term-body"><code>docker run --rm -p 8500:8500 \
+  -v "$PWD/webroot:/srv/app" \
+  #( application.image )#:#( application.version )#</code></pre>
+        </div>
+        <p><a class="card-more" href="#( application.docker )#" rel="noopener">Configuration and base-image use</a></p>
       </div>
 
       <div class="card reveal">
@@ -173,8 +186,7 @@ $ rustcfml --code 'writeOutput( 6*7 )'</code></pre>
     <div class="cta reveal">
       <h2>Something missing from your platform?</h2>
       <p>
-        Building for another target, packaging it for a distribution, or wanting a Docker
-        image before the official one lands, open an issue. Platform gaps are treated as
+        Building for another target or packaging it for a distribution? Open an issue. Platform gaps are treated as
         bugs, and releases are frequent.
       </p>
       <div class="btn-row">

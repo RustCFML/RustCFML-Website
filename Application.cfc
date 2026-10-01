@@ -42,7 +42,7 @@ component {
             code = "rustcfml --serve ./webroot --production" }
         , { name = "Container", icon = "package", doc = "deployment.md##docker",
             body = "A multi-arch image on Chainguard Wolfi: about 36 MB, non-root, extension-aware, and it stops cleanly on docker stop.",
-            code = "docker run -p 8500:8500 -v $PWD:/app ghcr.io/rustcfml/rustcfml" }
+            code = "docker run -p 8500:8500 -v $PWD:/srv/app ghcr.io/rustcfml/rustcfml" }
         , { name = "Edge / Cloudflare", icon = "globe", doc = "deployment.md##cloudflare-workers",
             body = "The same templates compiled to WebAssembly and shipped with wrangler. The worker host adds Hyperdrive datasources, sessions in KV and an application scope backed by a Durable Object.",
             code = "wrangler deploy",
@@ -244,6 +244,9 @@ component {
         application.contribs  = repo & "/graphs/contributors";
         application.docsBlob  = repo & "/blob/main/docs/";
         application.download  = repo & "/releases/download/" & this.version & "/";
+        application.docker    = application.org & "/RustCFML-Docker";
+        // Image tags follow engine releases, so the quoted tag is this.version.
+        application.image     = "ghcr.io/rustcfml/rustcfml";
         application.demo       = "https://rustcfml.github.io/RustCFML/demo/";
         application.trycf       = "https://trycf.com/home";
         application.cfdocs     = "https://cfdocs.org";

@@ -38,6 +38,7 @@ jobs:
     outputs:
       changed: ${{ steps.versions.outputs.changed }}
       latest: ${{ steps.versions.outputs.latest }}
+      sha: ${{ steps.commit.outputs.sha }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -122,6 +123,7 @@ jobs:
           cargo build --release --target wasm32-unknown-unknown
 
       - name: Commit to main
+        id: commit
         if: steps.versions.outputs.changed == 'true'
         env:
           CURRENT: ${{ steps.versions.outputs.current }}
@@ -137,6 +139,7 @@ jobs:
           the version the site quotes are bumped together, and wasm32 compiled
           against the new engine in CI before this was committed."
           git push origin "HEAD:${{ github.ref_name }}"
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
   # Called directly rather than left to the push above: a push authenticated
   # with GITHUB_TOKEN does not trigger `on: push` workflows.
@@ -144,4 +147,6 @@ jobs:
     needs: update
     if: needs.update.outputs.changed == 'true'
     uses: ./.github/workflows/deploy.yml
+    with:
+      ref: ${{ needs.update.outputs.sha }}
     secrets: inherit
